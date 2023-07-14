@@ -1,0 +1,3 @@
+http://localhost:6969/api/translations/parse-and-merge-translation-to-csv-file
+http://localhost:6969/api/translations/import-translation-to-db
+http://localhost:6969/api/translations/get-translation-page?page=1&pageSize=10

@@ -11,6 +11,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
+import org.supercsv.cellprocessor.Optional;
 import org.supercsv.cellprocessor.ParseLong;
 import org.supercsv.cellprocessor.constraint.NotNull;
 import org.supercsv.cellprocessor.ift.CellProcessor;
@@ -22,9 +23,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -65,37 +69,43 @@ public class ParseAndMergeTranslationService {
                                                            List<SentencesAudioFileNameDto> listSentenceAudioFile) {
         List<TranslationEntity> translationResults = new ArrayList<>();
 
-        List<Long> engSentenceIds = listSentenceFromFile
+        Set<Long> engSentenceIds = listSentenceFromFile
                 .stream()
                 .filter(sentencesDto -> sentencesDto.getLanguageCode().equals("eng"))
                 .map(SentencesDto::getSentenceId)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
 
         Map<Long, String> mapEngSentenceBySentenceId = listSentenceFromFile
                 .stream()
                 .filter(sentencesDto -> sentencesDto.getLanguageCode().equals("eng"))
                 .collect(Collectors.toMap(SentencesDto::getSentenceId, SentencesDto::getText));
 
-        List<Long> vieSentenceIds = listSentenceFromFile
+        Set<Long> vieSentenceIds = listSentenceFromFile
                 .stream()
                 .filter(sentencesDto -> sentencesDto.getLanguageCode().equals("vie"))
                 .map(SentencesDto::getSentenceId)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
 
         Map<Long, String> mapVieSentenceBySentenceId = listSentenceFromFile
                 .stream()
                 .filter(sentencesDto -> sentencesDto.getLanguageCode().equals("vie"))
                 .collect(Collectors.toMap(SentencesDto::getSentenceId, SentencesDto::getText));
 
-        Map<Long, Long> mapTranslationIdBySentenceId = listLinkFileNameFromFile
+        Set<LinksFileNameDto> listFilter = listLinkFileNameFromFile
                 .stream()
-                .filter(linksFileNameDto -> engSentenceIds.contains(linksFileNameDto.getSentenceId()))
-                .filter(linksFileNameDto -> vieSentenceIds.contains(linksFileNameDto.getTranslationId()))
-                .collect(Collectors.toMap(LinksFileNameDto::getSentenceId, LinksFileNameDto::getTranslationId));
+                .filter(linksFileNameDto -> engSentenceIds.contains(linksFileNameDto.getSentenceId())
+                        && vieSentenceIds.contains(linksFileNameDto.getTranslationId()))
+                .collect(Collectors.toSet());
+
+        Map<Long, Long> mapTranslationIdBySentenceId = listFilter
+                .stream()
+                .collect(Collectors.toMap(LinksFileNameDto::getSentenceId, LinksFileNameDto::getTranslationId, (existing, replacement) -> existing));
 
         Map<Long, String> mapAudioUrlBySentenceId = listSentenceAudioFile
                 .stream()
-                .collect(Collectors.toMap(SentencesAudioFileNameDto::getSentenceId, SentencesAudioFileNameDto::getAttributionUrl));
+                .filter(sentencesAudioFileNameDto ->  engSentenceIds.contains(sentencesAudioFileNameDto.getSentenceId())
+                        && sentencesAudioFileNameDto.getAttributionUrl() != null)
+                .collect(Collectors.toMap(SentencesAudioFileNameDto::getSentenceId, SentencesAudioFileNameDto::getAttributionUrl, (existing, replacement) -> existing));
 
         engSentenceIds.forEach(engSentenceId -> {
             TranslationEntity translation = new TranslationEntity();
@@ -124,32 +134,28 @@ public class ParseAndMergeTranslationService {
     }
 
     private String convertTranslationDataToCsvFile(List<TranslationEntity> translationData) {
-        ICsvBeanWriter beanWriter = null;
+        ICsvBeanWriter beanWriter;
         final String[] header = new String[]{"EngSentenceId", "EngSentenceText", "EngSentenceAudioUrl", "VieSentenceId", "VieSentenceText"};
         File translationFile;
         try {
-            translationFile = new ClassPathResource(
-                    "translation.csv").getFile();
+            Path translationFilePath = Path.of("src/main/resources/translation.csv");
+            Files.deleteIfExists(translationFilePath);
+            translationFile = new File("src/main/resources/translation.csv");
             beanWriter = new CsvBeanWriter(new FileWriter(translationFile), CsvPreference.STANDARD_PREFERENCE);
             CellProcessor[] processors = new CellProcessor[]{
-                    new ParseLong(),
                     new NotNull(),
-                    new NotNull(),
-                    new ParseLong(),
-                    new NotNull(),
+                    new Optional(),
+                    new Optional(),
+                    new Optional(),
+                    new Optional(),
             };
             for (TranslationEntity translation : translationData) {
                 beanWriter.write(translation, header, processors);
             }
+            beanWriter.close();
         } catch (IOException ioException) {
             LOGGER.error(ioException.getMessage());
             return null;
-        } finally {
-            try {
-                beanWriter.close();
-            } catch (IOException e) {
-                LOGGER.error(e.getMessage());
-            }
         }
         return translationFile.getPath();
     }

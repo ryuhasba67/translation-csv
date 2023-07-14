@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 public class TranslationEntity {
     @Id
-    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    @GeneratedValue(strategy= GenerationType.AUTO)
     private Long id;
 
     private Long engSentenceId;
@@ -28,10 +28,10 @@ public class TranslationEntity {
 
     public TranslationEntity(List<String> row) {
         int i = 0;
-        this.engSentenceId = Long.valueOf(getDataAtIndex(row, i++));
+        this.engSentenceId = getDataAtIndex(row, i) != null ? Long.valueOf(getDataAtIndex(row, i++)) : null;
         this.engSentenceText = getDataAtIndex(row, i++);
-        this.engSentenceAudioUrl = getDataAtIndex(row, i++);
-        this.vieSentenceId = Long.valueOf(getDataAtIndex(row, i++));
+        this.engSentenceAudioUrl = getDataAtIndex(row, i++) ;
+        this.vieSentenceId = getDataAtIndex(row, i) != null ? Long.valueOf(getDataAtIndex(row, i++)) : null;
         this.vieSentenceText = getDataAtIndex(row, i++);
     }
 

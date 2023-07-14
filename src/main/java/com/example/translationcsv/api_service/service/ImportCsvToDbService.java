@@ -5,6 +5,7 @@ import com.example.translationcsv.api_service.repository.TranslationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,6 +21,7 @@ public class ImportCsvToDbService {
     @Autowired
     private CsvService csvService;
 
+    @Transactional
     public boolean importTranslationToDb() throws IOException {
         boolean isTranslationFileExist = new ClassPathResource("translation.csv").exists();
         if (isTranslationFileExist) {
