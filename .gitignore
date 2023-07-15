@@ -36,5 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 
-/src/main/resources/sentences.csv
-/src/main/resources/links.csv
+/src/main/resources/static/sentences.csv
+/src/main/resources/static/links.csv
+/src/main/resources/static/sentences_with_audio.csv

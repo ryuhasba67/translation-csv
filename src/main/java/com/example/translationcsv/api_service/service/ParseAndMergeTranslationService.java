@@ -7,6 +7,7 @@ import com.example.translationcsv.api_service.entity.TranslationEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -42,13 +43,16 @@ public class ParseAndMergeTranslationService {
     @Autowired
     private CsvService csvService;
 
+    @Value("${application.translation-file-path}")
+    private String translationFilePath;
+
     public String parseAndMergeTranslationToCsvFile() {
         try {
-            Resource sentencesResource = resourceLoader.getResource("classpath:sentences.csv");
+            Resource sentencesResource = resourceLoader.getResource("classpath:/static/sentences.csv");
             File sentencesCsvFile = sentencesResource.getFile();
-            Resource linksFileNameResource = resourceLoader.getResource("classpath:links.csv");
+            Resource linksFileNameResource = resourceLoader.getResource("classpath:/static/links.csv");
             File linksFileNameCsvFile = linksFileNameResource.getFile();
-            Resource sentencesAudioResource = resourceLoader.getResource("classpath:sentences_with_audio.csv");
+            Resource sentencesAudioResource = resourceLoader.getResource("classpath:/static/sentences_with_audio.csv");
             File sentencesAudioCsvFile = sentencesAudioResource.getFile();
 
             List<SentencesDto> listSentenceFromFile = csvService.readSentencesCsvFile(new FileInputStream(sentencesCsvFile.getAbsolutePath()));
@@ -138,9 +142,9 @@ public class ParseAndMergeTranslationService {
         final String[] header = new String[]{"EngSentenceId", "EngSentenceText", "EngSentenceAudioUrl", "VieSentenceId", "VieSentenceText"};
         File translationFile;
         try {
-            Path translationFilePath = Path.of("src/main/resources/translation.csv");
-            Files.deleteIfExists(translationFilePath);
-            translationFile = new File("src/main/resources/translation.csv");
+            Path translationPath = Path.of(translationFilePath);
+            Files.deleteIfExists(translationPath);
+            translationFile = new File(translationPath.toUri());
             beanWriter = new CsvBeanWriter(new FileWriter(translationFile), CsvPreference.STANDARD_PREFERENCE);
             CellProcessor[] processors = new CellProcessor[]{
                     new NotNull(),
